@@ -1,14 +1,39 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import Main from '../layouts/Main'
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import Main from '../layouts/Main';
 
 function Contact() {
+    const [pageData, setPageData] = useState(null);
+    const [settings, setSettings] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // 1. Contact səhifəsinin məzmununu (text editor content) çəkirik
+        const fetchPage = fetch('https://api.rvssoy.com/pages/get_page.php?slug=contact-us').then(res => res.json());
+        
+        // 2. Qlobal əlaqə məlumatlarını (phone, email, map) çəkirik
+        const fetchSettings = fetch('https://api.rvssoy.com/settings/read.php').then(res => res.json());
+
+        Promise.all([fetchPage, fetchSettings])
+            .then(([pageRes, settingsRes]) => {
+                setPageData(pageRes);
+                setSettings(settingsRes);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching data:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) return <div className="text-center py-5">Loading...</div>;
+
     return (
         <Main>
-            <section className="page-title" style={{ backgroundImage: 'url(images/background/13.jpg)' }}>
+            <section className="page-title" style={{ backgroundImage: 'url(/images/background/13.jpg)' }}>
                 <div className="auto-container">
                     <div className="title-outer text-center">
-                        <h1 className="title">Contact Us</h1>
+                        <h1 className="title">{pageData?.title || 'Contact Us'}</h1>
                         <ul className="page-breadcrumb">
                             <li><Link to="/">Home</Link></li>
                             <li>Contact</li>
@@ -24,25 +49,21 @@ function Contact() {
                             <div className="contact-info">
                                 <h2 className="section-title">Contact Information</h2>
                                 <ul className="list-style-two">
-                                    <li><strong>Address:</strong> Saarinkotie 8B 8, Kotka, 48310, Finland</li>
-                                    <li><strong>Business ID:</strong> 3437850-3</li>
-                                    <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/company/rv-spark-solutions-oy" target="_blank" rel="noopener noreferrer">RV Spark Solutions Oy</a></li>
-                                    <li><strong>Email:</strong> <a href="mailto:info@rvssoy.com">info@rvssoy.com</a></li>
-                                    <li><strong>Mobile:</strong> +358 449700328</li>
+                                    <li><strong>Address:</strong> {settings.address}</li>
+                                    <li><strong>Business ID:</strong> {settings.business_id}</li>
+                                    <li><strong>LinkedIn:</strong> <a href={settings.linkedin} target="_blank" rel="noopener noreferrer">RV Spark Solutions Oy</a></li>
+                                    <li><strong>Email:</strong> <a href={`mailto:${settings.email}`}>{settings.email}</a></li>
+                                    <li><strong>Mobile:</strong> <a href={`tel:${settings.phone}`}>{settings.phone}</a></li>
                                 </ul>
                             </div>
                         </div>
                         <div className="col-lg-6 col-md-12">
                             <div className="about-company">
-                                <h2 className="section-title">About RV Spark Solutions Oy</h2>
-                                <p>
-                                    Founded in 2024, RV Spark Solutions Oy is a dynamic provider of comprehensive electrical solutions. We aim to become the most trusted partner in our field, empowering clients with safe, reliable, value-driven, and sustainable electrical systems that drive their success.
-                                </p>
-                                <p>
-                                    Our services include electrical design and installation, maintenance and repairs, specialized training programs, automation spare parts, and construction compliance services. With extensive experience in the Oil & Gas and Critical Facility sectors, our founder ensures safety, reliability, and meticulous attention to detail in every project.
-                                </p>
-                                <p><strong>Mission:</strong> To deliver high-quality electrical services guided by best practices and client-focused excellence.</p>
-                                <p><strong>Vision:</strong> To be the most trusted partner for electrical solutions.</p>
+                                {/* Editor-dan gələn HTML kontenti bura yükləyirik */}
+                                <div 
+                                    className="content-editor-output"
+                                    dangerouslySetInnerHTML={{ __html: pageData?.content }} 
+                                />
                             </div>
                         </div>
                     </div>
@@ -52,13 +73,12 @@ function Contact() {
             <section className="map-section">
                 <iframe
                     className="map w-100"
-                    src="https://maps.google.com/maps?width=100%25&height=600&hl=en&q=Saarinkotie%208B%208,%20Kotka%20Finland+(RV%20Spark%20Solutions%20Oy)&t=&z=14&ie=UTF8&iwloc=B&output=embed"
+                    src={settings.map_iframe || "https://maps.google.com/maps?q=Kotka&output=embed"}
                     title="Location Map"
                 />
             </section>
-
         </Main>
-    )
+    );
 }
 
-export default Contact
+export default Contact;
